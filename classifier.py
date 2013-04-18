@@ -26,6 +26,9 @@ class Classifier:
 			count = sum(self._count[category])
 		return count
 
+	def derive_probability(self,category,given=None):
+		return self._prob(given,given=category)*self._prob(category)/self._prob(given)
+
 
 	def _prob(self,category,given=None):
 		"""Returns the probability of getting a certain word
@@ -34,10 +37,13 @@ class Classifier:
 		if not given:
 			denominator = self.total
 			count = self.category_total(category)
-		else: 
-			denominator = self.category_total(given)
-			index = self._classifiers.index(given)
-			count = self._count[category][index]
+		else:
+			if given in self._classifiers:
+				denominator = self.category_total(given)
+				index = self._classifiers.index(given)
+				count = self._count[category][index]
+			else:
+				return self.derive_probability(self,category,given=None)
 		return count/float(denominator)
 
 	def predict(self,text):
