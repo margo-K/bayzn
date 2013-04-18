@@ -28,16 +28,16 @@ class Classifier:
 
 
 	def _prob(self,category,given=None):
-		"""Returns the probability of getting a certain word"""
+		"""Returns the probability of getting a certain word
+
+		*given can be any element of self._classifiers"""
 		if not given:
 			denominator = self.total
 			count = self.category_total(category)
 		else: 
-			denominator = self.category_total(given) # Not quite correct (cause we're not counting the ones in that category)
-			index = self._classifiers.index(category)
+			denominator = self.category_total(given)
+			index = self._classifiers.index(given)
 			count = self._count[category][index]
-		# assert(if given: category in self._count) # i.e. if a given is specified, the category is a word instead
-		# of a classifier
 		return count/float(denominator)
 
 	def predict(self,text):
@@ -50,33 +50,52 @@ class ClassifierTests(unittest.TestCase):
 		self.c = Classifier(['alpha','beta'])
 		self.c._count = {'the':[10,11],'sky':[0,7],'blue':[1,3]}
 
-	def test_category_total(self):
+	def test_word_total(self):
 		#Word Counts
 		self.assertEqual(self.c.category_total('the'),10+11)
 		self.assertEqual(self.c.category_total('sky'),0+7)
 		self.assertEqual(self.c.category_total('blue'),1+3)
 
+	def test_classifier_total(self):
 		#Category Counts
 		self.assertEqual(self.c.category_total('alpha'),10+0+1)
 		self.assertEqual(self.c.category_total('beta'),11+7+3)
 
-		#Total Counts
+	def test_total(self):
+		#Total Counts from Categories
 		self.assertEqual(self.c.total,sum([self.c.category_total('alpha'),self.c.category_total('beta')]))
+
+		#Total Counts from Words
 		self.assertEqual(self.c.total,sum([self.c.category_total('the'),self.c.category_total('sky'),self.c.category_total('blue')]))
 
-	def test_probabilities(self):
+	def test_word_probabilities(self):
 		#Absolute Probability of Words
-		self.assertEqual(self.c._prob('the'),21/float(31))
-		self.assertEqual(self.c._prob('sky'),7/float(31))
-		self.assertEqual(self.c._prob('blue'),4/float(31))
+		self.assertAlmostEqual(self.c._prob('the'),21/float(31),places=5)
+		self.assertAlmostEqual(self.c._prob('sky'),7/float(31),places=5)
+		self.assertAlmostEqual(self.c._prob('blue'),4/float(31),places=5)
 
+	def test_classifier_probabilities(self):
 		#Absolute Probability of Classifiers
-		self.assertEqual(self.c._prob('alpha'),11/float(31))
-		self.assertEqual(self.c._prob('beta'),21/float(31))
+		self.assertAlmostEqual(self.c._prob('alpha'),11/float(31),places=5)
+		self.assertAlmostEqual(self.c._prob('beta'),21/float(31),places=5)
 
+	def test_conditional_probabilities(self):
 		#Conditional Probabilities of Words
-		self.assertEqual(self.c._prob('the',given='beta'),11/float(21))
-		self.assertEqual(self.c._prob('sky',given='alpha'),float(0)) #Edge case(where prob should =0)
+		self.assertAlmostEqual(self.c._prob('the',given='beta'),11/float(21),places=5)
+		self.assertAlmostEqual(self.c._prob('sky',given='alpha'),float(0),places=5) #Edge case(where prob should =0)
+	
+	def test_train(self):
+		cat = 'alpha'
+		count_before = self.c.category_total(cat)
+
+		words = ['word1','word2','word3']
+
+		for word in words:
+			self.c.train(cat,word)
+
+		count_after = self.c.category_total(cat)
+
+		self.assertEqual(len(words),count_after-count_before)
 
 if __name__ == '__main__':
 	unittest.main()
