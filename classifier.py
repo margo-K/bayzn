@@ -48,7 +48,12 @@ class Classifier:
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
-		pass
+		for classifier in self._classifiers:
+			prob = self._prob(classifier)
+			for word in text.split():
+				prob*= self._prob(word,given=classifier)/self._prob(word)
+			print "Probability this is a {} text: {}".format(classifier,prob)
+		
 
 
 class ClassifierTests(unittest.TestCase):
@@ -104,6 +109,15 @@ class ClassifierTests(unittest.TestCase):
 		self.assertEqual(len(words),count_after-count_before)
 
 if __name__ == '__main__':
+	training_data = [('art', 'painting waterful the thing homeless art'),
+				 ('sport','sport title sports thing magic johnson'),
+				 ('art', 'more watercolor hopes rise'),
+				 ('sport','basketball starts pl')]
+	c = Classifier(['art','sport'])
+	for category,text in training_data:
+		c.train(category,text)
+	print "Classifiers:{} Counter: {}".format(c._classifiers,c._count)
+	c.predict('watercolors fall from the magic sky')
 	unittest.main()
 
 
@@ -132,71 +146,5 @@ if __name__ == '__main__':
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import pdb
-# C = {} # C['word'][0] = number of articles of type 0 that word is in
-# # count = {} #count[classifier] = number of articles of type classifier
-
-# classifiers = ('art','sport')
-# count = {classifier:0 for classifier in classifiers}
-
-
-# def tokenize(string):
-# 	"""Return a list of tokens from a given string"""
-# 	return string.split()
-
-# def plusdatapoint(string,classification):
-# 	count[classification]+=1
-# 	print "entering data point calc C: {}\ncount:{}".format(C,count)
-# 	for token in set(tokenize(string)):
-# 		wordentry = C.setdefault(token,{classification: 0}) 
-# 		# print "Word entry: {}".format(wordentry)
-# 		item = wordentry.setdefault(classification,0)
-# 		item+=1
-# 	return C, count
-
-# def get_probability(word,classifier):
-# 	"""Returns P(article has word in it|article of of type classifer), i.e. P(word|A) for arts article"""
-# 	classindex = i[classifier]
-# 	wordcount = C[word][classindex]
-# 	typecount = count[classindex]
-
-# 	return wordcount/typecount
-
-# def classify(wordinarticle):
-# 	for classifier in i:
-# 		print "{classifier}: ".format(get_probability(wordinarticle,classifier)*(count[classifier]/sum(count)))
-
-
-# # def classify(string,classifier):
-# # 	tokens = tokenize(string)
-# # 	for token in tokens:
-# # 		P[token][c[classifier]]+=1
-# # 		count[c[classifier]] += 
-
-
-# if __name__ == '__main__':
-	
-# 	titles = [('art', 'painting waterful the thing homeless art'),('sport','sport title sports thing magic johnson')]
-# 	for classifier,headline in titles:
-# 		C, count = plusdatapoint(headline,classifier)
-
-# 	print "All done: "
-# 	print "count: {}".format(count)
-# 	print "C {}".format(C)
-# 	# #pdb.set_trace()
 
 
