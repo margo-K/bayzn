@@ -3,55 +3,69 @@ import pdb
 
 class Classifier:
 	def __init__(self,classifiers):
-		self._classifiers = classifiers
-		self._count = {}
+		self._classifiers = classifiers # a list
+		self._words = [] # also a list
+		self._count = [] # will be a list of lists
 
 	@property
 	def total(self):
-		return sum(map(self.category_total,self._count)) # Note: map from a dictionary means a different order, but it doesn't matter in this case
+		return sum([x+y for x,y in self._count])
 
-	def train(self,classification,text):
+	def train(self,classification,text): # Rename the things in this to make logic clearer
 		index = self._classifiers.index(classification)
 		for word in text.split(): # should be able to pass in different splits
-			counts = self._count.setdefault(word,[0]*len(self._classifiers))
-			counts[index]+=1
+			try: 
+				position = self._words.index(word)
+			except ValueError:
+				position = len(self._words)
+				self._words.append(word)
+				self._count.append([0]*len(self._classifiers))
+				if len(self._words) != len(self._count): # replace with better test
+					print "Uh Oh Your matching ain't working!"
+			self._count[position][index]+=1
 
-	def category_total(self,category):
-		count = 0
+	def category_total(self,category): #add support for intersect
 		if category in self._classifiers:
 			index = self._classifiers.index(category)
-			for word in self._count:
-				count+=self._count[word][index]
+			return sum([x[index] for x in self._count])
 		else:
-			count = sum(self._count[category])
-		return count
+			index = self._words.index(category)
+			return sum(self._count[index])
 
-	def derive_probability(self,category,given=None):
-		return self._prob(given,given=category)*self._prob(category)/self._prob(given)
+	def derive_probability(self,category,givend):
+		return self._prob(givend,given=category)*self._prob(category)/self._prob(given)
+		
 
 
-	def _prob(self,category,given=None):
+	def _prob(self,category,given=None,notfoundfn=lambda : 1):# given must be a classifier
 		"""Returns the probability of getting a certain word
-
 		*given can be any element of self._classifiers"""
+		if category not in self._classifiers and category not in self._words:
+			return notfoundfn()
 		if not given:
 			denominator = self.total
-			count = self.category_total(category)
+			numerator = self.category_total(category)
+			return numerator/float(denominator)
 		else:
 			if given in self._classifiers:
+				classifier_index = self._classifiers.index(given)
 				denominator = self.category_total(given)
-				index = self._classifiers.index(given)
-				count = self._count[category][index]
+	
+				word_index = self._words.index(category)
+				numerator = self._count[word_index][classifier_index]
+				return numerator/float(denominator)
 			else:
-				return self.derive_probability(self,category,given=None)
-		return count/float(denominator)
+				return self.derive_probability(self,category,givend=given) # what's going on here
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
 		for classifier in self._classifiers:
 			prob = self._prob(classifier)
 			for word in text.split():
-				prob*= self._prob(word,given=classifier)/self._prob(word)
+				wordprob = self._prob(word,given=classifier)/self._prob(word)
+				print "{}: {}".format(word,wordprob)
+				prob*=wordprob
+
 			print "Probability this is a {} text: {}".format(classifier,prob)
 		
 
@@ -116,9 +130,9 @@ if __name__ == '__main__':
 	c = Classifier(['art','sport'])
 	for category,text in training_data:
 		c.train(category,text)
-	print "Classifiers:{} Counter: {}".format(c._classifiers,c._count)
+	print "Classifiers:{}, Words: {}, Counter: {}".format(c._classifiers,c._words, c._count)
 	c.predict('watercolors fall from the magic sky')
-	unittest.main()
+	# unittest.main()
 
 
 
