@@ -1,5 +1,6 @@
 import unittest
 import pdb
+import pprint
 
 class Classifier:
 	def __init__(self,classifiers):
@@ -24,50 +25,67 @@ class Classifier:
 					print "Uh Oh Your matching ain't working!"
 			self._count[position][index]+=1
 
-	def category_total(self,category): #add support for intersect
+	def category_total(self,category,category2=None): #add support for intersect
+		"""Category 2 must be a classifier"""
 		if category in self._classifiers:
 			index = self._classifiers.index(category)
 			return sum([x[index] for x in self._count])
 		else:
 			index = self._words.index(category)
+			if category2:
+				index2 = self._classifiers.index(category2)
+				return self._count[index][index2]
 			return sum(self._count[index])
 
-	def derive_probability(self,category,givend):
-		return self._prob(givend,given=category)*self._prob(category)/self._prob(given)
+	def derive_probability(self,classifier,word):
+		# pdb.set_trace()
+		return self._prob(word,given=classifier)*self._prob(classifier)/self._prob(word)
 		
-
-
-	def _prob(self,category,given=None,notfoundfn=lambda : 1):# given must be a classifier
+	def _prob(self,term,given=None):# given must be a classifier
 		"""Returns the probability of getting a certain word
-		*given can be any element of self._classifiers"""
-		if category not in self._classifiers and category not in self._words:
-			return notfoundfn()
-		if not given:
-			denominator = self.total
-			numerator = self.category_total(category)
+		*given must be an element self._classifiers"""
+		if given: 
+			classifier_index, word_index = self._classifiers.index(given), self._words.index(term)
+
+			denominator = self.category_total(given)
+			numerator = self._count[word_index][classifier_index] # subsitute with category_total(word,index)
+			print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
 			return numerator/float(denominator)
+
 		else:
-			if given in self._classifiers:
-				classifier_index = self._classifiers.index(given)
-				denominator = self.category_total(given)
-	
-				word_index = self._words.index(category)
-				numerator = self._count[word_index][classifier_index]
-				return numerator/float(denominator)
-			else:
-				return self.derive_probability(self,category,givend=given) # what's going on here
+			denominator = self.total
+			numerator = self.category_total(term)
+			print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
+			return numerator/float(denominator)
+
+	def prob(self,word,given=None,notfoundfn=lambda : 1):
+		"""Returns probability of getting a certain word. Given can be anything"""
+		if word not in self._classifiers and word not in self._words:
+			print "{} was not found".format(word)
+			return notfoundfn()
+
+		if given in self._words: #case where Bayes' Theorem is applied
+			print "Deriving probability'"
+			return self.derive_probability(classifier=word,word=given)
+		if word in self._classifiers:
+			print "Calculating classifier probability"
+			return self._prob(word,given=given)
+		else:
+			print "Calculating word probability"
+			return self._prob(word,given=given)
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
 		for classifier in self._classifiers:
-			prob = self._prob(classifier)
+			prob = self.prob(classifier)
 			for word in text.split():
-				wordprob = self._prob(word,given=classifier)/self._prob(word)
-				print "{}: {}".format(word,wordprob)
-				prob*=wordprob
+				contribution = self.prob(word,given=classifier)/self.prob(word)
+				print "Classifier: {classifier} Prediction Word {}: \n Word Contribution: {}".format(word,contribution,classifier=classifier)
+				prob*=contribution
 
 			print "Probability this is a {} text: {}".format(classifier,prob)
 		
+
 
 
 class ClassifierTests(unittest.TestCase):
@@ -122,16 +140,80 @@ class ClassifierTests(unittest.TestCase):
 
 		self.assertEqual(len(words),count_after-count_before)
 
-if __name__ == '__main__':
-	training_data = [('art', 'painting waterful the thing homeless art'),
+	def test_counts(self):
+		training_data = [('art', 'painting waterful thing homeless art'),
 				 ('sport','sport title sports thing magic johnson'),
 				 ('art', 'more watercolor hopes rise'),
 				 ('sport','basketball starts pl')]
-	c = Classifier(['art','sport'])
+		c = Classifier(['art','sport'])
+		for category,text in training_data:
+			c.train(category,text)
+
+		calculated_counts = dict(zip(c._words, c._count))
+
+		real_counts = {'painting':[1,0],
+					   'waterful':[1,0],
+					   'thing':[1,1],
+					   'homeless':[1,0],
+					   'art':[1,0],
+					   'sport':[0,1],
+					   'title':[0,1],
+					   'sports':[0,1],
+					   'magic':[0,1],
+					   'johnson':[0,1],
+					   'more':[1,0],
+					   'watercolor':[1,0],
+					   'hopes':[1,0],
+					   'rise':[1,0],
+					   'basketball':[0,1],
+					   'starts':[0,1],
+					   'pl':[0,1]}
+		self.assertEqual(calculated_counts,real_counts)
+
+	def test_probabilities(self):
+		training_data = [('art', 'painting waterful thing homeless art'),
+				 ('sport','sport title sports thing magic johnson'),
+				 ('art', 'more watercolor hopes rise'),
+				 ('sport','basketball starts pl')]
+		c = Classifier(['art','sport'])
+		for category,text in training_data:
+			c.train(category,text)
+
+		expected_probs = {'basketball': 1/18,
+						 'art':1/18,
+						 'johnson': 1/18,
+						 'title': 1/18,
+						 'starts':1/18,
+						 'rise':1/18,
+						 'sports':1/18,
+						 'watercolor':1/18,
+						 'thing': 2/18,
+						 'pl': 1/18,
+						 'homeless': 1/18,
+						 'hopes': 1/18,
+						 'magic': 1/18,
+						 'sport': 1/18,
+						 'painting': 1/18,
+						 'waterful': 1/18,
+						 'more':1/18} # 17 unique words, with one word appearing twice = 18 'words'
+
+
+if __name__ == '__main__':
+	training_data = [('art', 'painting waterful thing homeless art'),
+				 ('sport','sport title sports thing magic johnson'),
+				 ('art', 'more watercolor hopes rise'),
+				 ('sport','basketball starts pl')]
+
+	k = Classifier(['art','sport'])
 	for category,text in training_data:
-		c.train(category,text)
-	print "Classifiers:{}, Words: {}, Counter: {}".format(c._classifiers,c._words, c._count)
-	c.predict('watercolors fall from the magic sky')
+		k.train(category,text)
+	print "Classifiers:{}, \nWords:".format(k._classifiers)
+	words = dict(zip(k._words, k._count))
+	pprint.pprint(words)
+	pprint.pprint(map(k.prob,words))
+	pdb.set_trace()
+	# pprint.pprint(zip(c._words,c._count))
+	k.predict('watercolor fall from magic sky')
 	# unittest.main()
 
 
