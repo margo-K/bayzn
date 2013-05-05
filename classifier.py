@@ -37,56 +37,54 @@ class Classifier:
 				return self._count[index][index2]
 			return sum(self._count[index])
 
-	def derive_probability(self,classifier,word):
+	def derive_probability(self,word,classifier):
 		# pdb.set_trace()
+		print "Deriving from word={} classifier={}".format(word,classifier)
 		return self._prob(word,given=classifier)*self._prob(classifier)/self._prob(word)
 		
 	def _prob(self,term,given=None):# given must be a classifier
 		"""Returns the probability of getting a certain word
 		*given must be an element self._classifiers"""
-		if given: 
+		if given:
 			classifier_index, word_index = self._classifiers.index(given), self._words.index(term)
 
 			denominator = self.category_total(given)
 			numerator = self._count[word_index][classifier_index] # subsitute with category_total(word,index)
 			print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
+
 			return numerator/float(denominator)
 
 		else:
 			denominator = self.total
 			numerator = self.category_total(term)
-			print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
+			# print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
 			return numerator/float(denominator)
 
-	def prob(self,word,given=None,notfoundfn=lambda : 1):
+	def prob(self,term,isclassifier=False,given=None,notfoundfn=lambda : 1):
 		"""Returns probability of getting a certain word. Given can be anything"""
-		if word not in self._classifiers and word not in self._words:
-			print "{} was not found".format(word)
+		if term not in self._classifiers and term not in self._words:
+			print "{} was not found".format(term)
 			return notfoundfn()
 
-		if given in self._words: #case where Bayes' Theorem is applied
+		if isclassifier and given in self._words: #case where Bayes' Theorem is applied
 			print "Deriving probability'"
-			return self.derive_probability(classifier=word,word=given)
-		if word in self._classifiers:
+			return self.derive_probability(classifier=term,word=given)
+		if isclassifier:
 			print "Calculating classifier probability"
-			return self._prob(word,given=given)
-		else:
-			print "Calculating word probability"
-			return self._prob(word,given=given)
+			return self._prob(term,given=given)
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
 		for classifier in self._classifiers:
-			prob = self.prob(classifier)
+			prob = self.prob(classifier,isclassifier=True)
 			for word in text.split():
+				print "{}, given {}: {}".format(word,classifier,self.prob(word,given=classifier))
+				pdb.set_trace()
 				contribution = self.prob(word,given=classifier)/self.prob(word)
-				print "Classifier: {classifier} Prediction Word {}: \n Word Contribution: {}".format(word,contribution,classifier=classifier)
+				print "Classifier: {classifier} Prediction Word: {} \n Word Contribution: {}".format(word,contribution,classifier=classifier)
 				prob*=contribution
 
 			print "Probability this is a {} text: {}".format(classifier,prob)
-		
-
-
 
 class ClassifierTests(unittest.TestCase):
 	def setUp(self):
@@ -210,8 +208,8 @@ if __name__ == '__main__':
 	print "Classifiers:{}, \nWords:".format(k._classifiers)
 	words = dict(zip(k._words, k._count))
 	pprint.pprint(words)
-	pprint.pprint(map(k.prob,words))
-	pdb.set_trace()
+	# pprint.pprint(map(k.prob,k._words))
+	# pdb.set_trace()
 	# pprint.pprint(zip(c._words,c._count))
 	k.predict('watercolor fall from magic sky')
 	# unittest.main()
