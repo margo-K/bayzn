@@ -38,7 +38,7 @@ class Classifier:
 			return sum(self._count[index])
 
 	def derive_probability(self,word,classifier):
-		# pdb.set_trace()
+		# #pdb.set_trace()
 		print "Deriving from word={} classifier={}".format(word,classifier)
 		return self._prob(word,given=classifier)*self._prob(classifier)/self._prob(word)
 		
@@ -62,16 +62,19 @@ class Classifier:
 
 	def prob(self,term,isclassifier=False,given=None,notfoundfn=lambda : 1):
 		"""Returns probability of getting a certain word. Given can be anything"""
-		if term not in self._classifiers and term not in self._words:
+		if term not in self._classifiers and term not in self._words: #Unencountered word
 			print "{} was not found".format(term)
 			return notfoundfn()
 
-		if isclassifier and given in self._words: #case where Bayes' Theorem is applied
+		if isclassifier and given in self._words: #must derive probability
 			print "Deriving probability'"
 			return self.derive_probability(classifier=term,word=given)
-		if isclassifier:
+		if isclassifier: # must get probability for a classifier
 			print "Calculating classifier probability"
 			return self._prob(term,given=given)
+		else:
+			return self._prob(term,given=given)
+
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
@@ -79,7 +82,7 @@ class Classifier:
 			prob = self.prob(classifier,isclassifier=True)
 			for word in text.split():
 				print "{}, given {}: {}".format(word,classifier,self.prob(word,given=classifier))
-				pdb.set_trace()
+				#pdb.set_trace()
 				contribution = self.prob(word,given=classifier)/self.prob(word)
 				print "Classifier: {classifier} Prediction Word: {} \n Word Contribution: {}".format(word,contribution,classifier=classifier)
 				prob*=contribution
@@ -209,7 +212,7 @@ if __name__ == '__main__':
 	words = dict(zip(k._words, k._count))
 	pprint.pprint(words)
 	# pprint.pprint(map(k.prob,k._words))
-	# pdb.set_trace()
+	# #pdb.set_trace()
 	# pprint.pprint(zip(c._words,c._count))
 	k.predict('watercolor fall from magic sky')
 	# unittest.main()
