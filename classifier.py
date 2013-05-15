@@ -71,13 +71,10 @@ class Classifier:
 			return self._prob(term,given=given)
 
 	def contribution(self,word,given_classifier):
-		if word in self._words:
-			contribution = self.prob(word,given=given_classifier)/self.prob(word)
-			print "Contribution of {}:{}".format(word,contribution)
-			return contribution
-		else:
-			return 1 # in case where the word is not found, ignore its contribution
-
+		contribution = self.prob(word,given=given_classifier)/self.prob(word)
+		print "Contribution of {}:{}".format(word,contribution)
+		return contribution
+	
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
 		for classifier in self._classifiers:
