@@ -25,20 +25,20 @@ class Classifier:
 					print "Uh Oh Your matching ain't working!"
 			self._count[position][index]+=1
 
-	def category_total(self,category,category2=None): #add support for intersect
+	def category_total(self,*category): #add support for intersect
 		"""Category 2 must be a classifier"""
-		if category in self._classifiers:
-			index = self._classifiers.index(category)
+		if len(category)>1:
+			classifier_index = self._classifiers.index(category[1])
+			word_index = self._words.index(category[0])
+			return self._count[word_index][classifier_index] # subsitute with category_total(word,index)
+		elif category in self._classifiers:
+			index = self._classifiers.index(category[0])
 			return sum([x[index] for x in self._count])
 		else:
-			index = self._words.index(category)
-			if category2:
-				index2 = self._classifiers.index(category2)
-				return self._count[index][index2]
+			index = self._words.index(category[0])
 			return sum(self._count[index])
 
 	def derive_probability(self,word,classifier):
-		# #pdb.set_trace()
 		print "Deriving from word={} classifier={}".format(word,classifier)
 		return self._prob(word,given=classifier)*self._prob(classifier)/self._prob(word)
 		
@@ -49,44 +49,42 @@ class Classifier:
 			classifier_index, word_index = self._classifiers.index(given), self._words.index(term)
 
 			denominator = self.category_total(given)
-			numerator = self._count[word_index][classifier_index] # subsitute with category_total(word,index)
-			print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
+			numerator = self.category_total(term,given) # subsitute with category_total(word,index)
+			print "Term:{} Numerator:{},Denominator:{},Given:{}".format(term,numerator,denominator,given)
 
 			return numerator/float(denominator)
 
 		else:
 			denominator = self.total
 			numerator = self.category_total(term)
-			# print "Numerator:{},'Denominator:{},Given:{}".format(numerator,denominator,given)
+			print "Term:{} Numerator:{},Denominator:{}".format(term,numerator,denominator)
 			return numerator/float(denominator)
 
-	def prob(self,term,isclassifier=False,given=None,notfoundfn=lambda : 1):
+	def prob(self,term,isclassifier=False,given=None):
 		"""Returns probability of getting a certain word. Given can be anything"""
 		if term not in self._classifiers and term not in self._words: #Unencountered word
 			print "{} was not found".format(term)
-			return notfoundfn()
-
+			return 0.000000000000001 # i.e. a small number
 		if isclassifier and given in self._words: #must derive probability
-			print "Deriving probability'"
 			return self.derive_probability(classifier=term,word=given)
-		if isclassifier: # must get probability for a classifier
-			print "Calculating classifier probability"
-			return self._prob(term,given=given)
-		else:
+		else: # must get probability for a classifier
 			return self._prob(term,given=given)
 
+	def contribution(self,word,given_classifier):
+		if word in self._words:
+			contribution = self.prob(word,given=given_classifier)/self.prob(word)
+			print "Contribution of {}:{}".format(word,contribution)
+			return contribution
+		else:
+			return 1 # in case where the word is not found, ignore its contribution
 
 	def predict(self,text):
 		"""Given text, returns the probability that the text is of each classifier type"""
 		for classifier in self._classifiers:
 			prob = self.prob(classifier,isclassifier=True)
 			for word in text.split():
-				print "{}, given {}: {}".format(word,classifier,self.prob(word,given=classifier))
-				#pdb.set_trace()
-				contribution = self.prob(word,given=classifier)/self.prob(word)
-				print "Classifier: {classifier} Prediction Word: {} \n Word Contribution: {}".format(word,contribution,classifier=classifier)
-				prob*=contribution
-
+				print "Current Probability {}".format(prob)
+				prob*=self.contribution(word,classifier)
 			print "Probability this is a {} text: {}".format(classifier,prob)
 
 class ClassifierTests(unittest.TestCase):
