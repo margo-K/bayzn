@@ -34,15 +34,13 @@ c.predict('watercolors fall from the magic sky')
 ####Bayes Theorem
 P(A|B) = P(B|A)*P(A) / P(B)
 
-ntains the words in this headline, given that it is a sports article
-
 ###Assumptions
 A Bayesian classifier relies on insights from Bayes Theorem to make predictions
 
 A **naive** Bayesian classifier simplifies the application of Bayes Theorem 
 with the following assumption:
 
-=> Assume the occurence of one token in a text item is independent of any other
+=> Assume the occurrence of one token in a text item is independent of any other
 
 For example:
 	If we are classifying news articles, we are now allowing the assumption that occurrences of the word 'Barack' in a news headline are independent of the occurrences of the word 'Obama'. In practice, this is (obviously) not true, but it allows us to simplify our calculations. 
@@ -51,7 +49,17 @@ For example:
 
 ###Some Edge Cases
 * words that do not appear in the corpus
-* words that do appear in the corpus, but have never been encountered with a given classifier (leading to a prob(word,given=classifier)=0)
+	=> Currently, words that do not appear in the corpus are assigned a very small probability (meaning that
+	its contribution to the Bayesian classifier prediction will be small_prob/small_prob = 1, i.e. it will be as if the word were not including the calculations)
+* words that do appear in the corpus, but have never been encountered with a given classifier 
+(leading to a prob(word,given=classifier)=0)
+	=> Currently, these return a probability of 0, but should return a small probability (so that they do not wipe out the contribution of all other words in the phrase)
+
+The problem with the above formulation is that the total probability in any given dimension will sum to > 1 because other probabilities are not being adjusted to account for part of the probability distribution being used for unknown words
+
+Other ways that these could be dealt with:
+	1. alotting a portion of the probability distribution to 'Unknown Words' and moving all lowest-probability seen words into this category
+	2. Additive Smoothing/Laplacian smoothing (+1 smoothing)
 
 
 ##Status
@@ -59,8 +67,6 @@ For example:
 
 ##Notes
 ###TO-DO:
-* Implement API described above
-* write explanations using a simpler case
 
 ####Features to implement
 * non-naive bayes classification (for a small 'universe')
